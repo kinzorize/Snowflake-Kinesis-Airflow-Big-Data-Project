@@ -1,6 +1,6 @@
+create  database PRO_DB;
 use pro_db.pro_schema;
 
-# I created storage integration to avoid sharing my aws key and secret key on github
 create or replace storage INTEGRATION S3_INTEGRATION_PRO
 TYPE = EXTERNAL_STAGE
 STORAGE_PROVIDER = S3
@@ -26,6 +26,7 @@ copy into PRO_DB.PRO_SCHEMA.CUSTOMER_RAW
 (C_CUSTKEY,C_NAME,C_ADDRESS,C_NATIONKEY, C_PHONE, C_ACCTBAL, C_MKTSEGMENT, C_COMMENT,BATCH_ID) from 
 (select t.$1,t.$2,t.$3,t.$4,t.$5,t.$6,t.$7,t.$8,'202111114020201' from @CUSTOMER_RAW_STAGE t);
 
+select * from Orders_Raw
 select * from Customer_Raw
 create or replace table Customer_Raw (
     C_CUSTKEY NUMBER,
@@ -37,10 +38,11 @@ create or replace table Customer_Raw (
     C_MKTSEGMENT VARCHAR,
     C_COMMENT VARCHAR,
     BATCH_ID DOUBLE
-  
-)
+);
+TRUNCATE Customer_Raw;
+TRUNCATE Orders_Raw;
 
-create or replace table Orders_Raw (
+create or replace table pro_db.pro_schema.Orders_Raw (
     O_ORDERKEY NUMBER,
     O_CUSTKEY NUMBER,
     O_ORDERSTATUS VARCHAR,
@@ -51,4 +53,13 @@ create or replace table Orders_Raw (
     O_SHIPPRIORITY NUMBER,
     O_COMMENT VARCHAR,
     BATCH_ID DOUBLE
-)
+);
+SELECT * FROM ORDER_CUSTOMER_DATE_PRICE;
+
+CREATE TABLE ORDER_CUSTOMER_DATE_PRICE (CUSTOMER_NAME VARCHAR(25), ORDER_DATE DATE, ORDER_TOTAL_PRICE NUMBER(12,2), BATCH_ID FLOAT);
+
+SELECT C.C_NAME AS CUSTOMER_NAME, O.O_ORDERDATE AS ORDER_DATE, SUM(O.O_TOTALPRICE) AS ORDER_TOTAL_PRICE
+FROM ORDERS_RAW O JOIN CUSTOMER_RAW C ON O.O_CUSTKEY = C.C_CUSTKEY
+WHERE O_ORDERSTATUS= 'F'
+GROUP BY C_NAME,O_ORDERDATE
+ORDER BY O_ORDERDATE
